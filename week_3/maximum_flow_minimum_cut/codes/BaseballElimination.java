@@ -2,6 +2,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 import edu.princeton.cs.algs4.Bag;
@@ -19,7 +20,7 @@ public class BaseballElimination {
     private final int[] losses;
     private final int[] remaining;
     private final int[][] against;
-    private Bag<String> certificate;
+    private List<String> certificate;
 
     // create a baseball division from given filename in format specified below
     public BaseballElimination(String filename) {
@@ -93,7 +94,7 @@ public class BaseballElimination {
     public boolean isEliminated(String team) {
         validateTeam(team);
         int x = teamIndices.get(team);
-        certificate = new Bag<>();
+        certificate = new ArrayList<>();
         boolean flag = false;
         // Trivial elimination
         for (int i = 0; i < numberOfTeams; i++) {
@@ -112,9 +113,10 @@ public class BaseballElimination {
         validateTeam(team);
         // Non-trivial elimination
         boolean flag = isEliminated(team);
-        if (flag)
+        if (flag) {
+            Collections.sort(certificate);
             return certificate;
-        else
+        } else
             return null;
     }
 
@@ -155,6 +157,11 @@ public class BaseballElimination {
             for (int v = checkIdx; v < vertices - 1; v++) {
                 if (fordFulkerson.inCut(v)) {
                     certificate.add(teams[v - checkIdx]);
+                }
+            }
+            for (FlowEdge edge : flowNetwork.adj(0)) {
+                if (edge.capacity() > edge.flow()) {
+                    return true;
                 }
             }
             return true;
