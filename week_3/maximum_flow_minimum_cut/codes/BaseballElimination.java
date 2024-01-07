@@ -4,11 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import edu.princeton.cs.algs4.FlowEdge;
-import edu.princeton.cs.algs4.FlowNetwork;
-import edu.princeton.cs.algs4.FordFulkerson;
-import edu.princeton.cs.algs4.StdOut;
-import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.*;
 
 public class BaseballElimination {
     private final int numberOfTeams;
@@ -38,7 +34,9 @@ public class BaseballElimination {
             losses[i] = in.readInt();
             remaining[i] = in.readInt();
             for (int j = 0; j < numberOfTeams; j++) {
-                against[i][j] = in.readInt();
+                int againstValue = in.readInt();
+                StdOut.println(i + " " + j + " " + againstValue);
+                against[i][j] = againstValue;
             }
         }
     }
@@ -99,14 +97,16 @@ public class BaseballElimination {
         }
 
         // Non-trivial elimination
-        List<String> subset = buildFlowNetwork(x);
+        FlowNetwork flowNetwork = buildFlowNetwork(x);
+        FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
 
-        // FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0,
-        // flowNetwork.V() - 1);
-        if (subset == null)
-            return false;
+        for (FlowEdge edge : flowNetwork.adj(0)) {
+            if (edge.capacity() > edge.flow()) {
+                return true;
+            }
+        }
 
-        return true;
+        return false;
     }
 
     // subset R of teams that eliminates given team; null if not eliminated
@@ -115,51 +115,53 @@ public class BaseballElimination {
         int x = teamIndices.get(team);
 
         // Trivial elimination
-        List<String> subset = new ArrayList<>();
+        List<String> certificate = new ArrayList<>();
         for (int i = 0; i < numberOfTeams; i++) {
             if (wins[x] + remaining[x] < wins[i]) {
-                subset.add(teams[i]);
+                certificate.add(teams[i]);
             }
         }
-        if (!subset.isEmpty())
-            return subset;
-        // Non-trivial elimination
-        subset = buildFlowNetwork(x);
+        if (!certificate.isEmpty()) {
+            return certificate;
+        }
 
-        return subset;
+        // Non-trivial elimination
+        FlowNetwork flowNetwork = buildFlowNetwork(x);
+        FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
+
+        for (int i = 0; i < numberOfTeams; i++) {
+            if (fordFulkerson.inCut(i) && i != x) {
+                certificate.add(teams[i]);
+            }
+        }
+        return certificate.isEmpty() ? null : certificate;
     }
 
-    private List<String> buildFlowNetwork(int x) {
-        int gameVertices = numberOfTeams * (numberOfTeams - 1) / 2;
-        int teamVertices = numberOfTeams - 1;
+    private FlowNetwork buildFlowNetwork(int x) {
+        int teamExcludeX = numberOfTeams - 1;
+        int gameVertices = teamExcludeX * (teamExcludeX - 1) / 2;
+        int teamVertices = teamExcludeX;
         int vertices = 2 + gameVertices + teamVertices;
         FlowNetwork flowNetwork = new FlowNetwork(vertices);
-        int sum = 0;
+        int gameVertex = 1;
+
         for (int i = 0; i < numberOfTeams; i++) {
             if (i == x)
                 continue;
-            for (int j = i + 1; j < numberOfTeams; j++) {
-                if (j == x)
+            for (int j = 0; j < numberOfTeams; j++) {
+                if (j == x || j <= i)
                     continue;
-                flowNetwork.addEdge(new FlowEdge(vertices - 2, i, against[i][j]));
-                sum += against[i][j];
-                flowNetwork.addEdge(new FlowEdge(i, teamVertices + i, Double.POSITIVE_INFINITY));
-                flowNetwork.addEdge(new FlowEdge(i, teamVertices + j, Double.POSITIVE_INFINITY));
+                flowNetwork.addEdge(new FlowEdge(0, gameVertex, against[i][j]));
+                flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertices + i, Double.POSITIVE_INFINITY));
+                flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertices + j, Double.POSITIVE_INFINITY));
+
+                gameVertex++;
             }
+
             flowNetwork.addEdge(new FlowEdge(teamVertices + i, vertices - 1, wins[x] + remaining[x] - wins[i]));
         }
-        FordFulkerson ff = new FordFulkerson(flowNetwork, vertices - 2, vertices - 1);
-        List<String> subset = new ArrayList<>();
-        if (sum == ff.value())
-            return null;
-        else {
-            for (int v = gameVertices; v < vertices - 2; v++) {
-                if (ff.inCut(v)) {
-                    subset.add(teams[v - gameVertices]);
-                }
-            }
-            return subset.isEmpty() ? null : subset;
-        }
+
+        return flowNetwork;
     }
 
     public static void main(String[] args) {
