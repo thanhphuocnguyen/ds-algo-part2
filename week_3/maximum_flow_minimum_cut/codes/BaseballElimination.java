@@ -97,7 +97,7 @@ public class BaseballElimination {
 
         // Non-trivial elimination
         FlowNetwork flowNetwork = buildFlowNetwork(x);
-        FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
+       new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
 
         for (FlowEdge edge : flowNetwork.adj(0)) {
             if (edge.capacity() > edge.flow()) {
@@ -115,9 +115,9 @@ public class BaseballElimination {
 
         // Trivial elimination
         List<String> certificate = new ArrayList<>();
-        for (int i = 1; i <= numberOfTeams; i++) {
-            if (wins[x] + remaining[x] < wins[i - 1]) {
-                certificate.add(teams[i - 1]);
+        for (int i = 0; i <= numberOfTeams; i++) {
+            if (wins[x] + remaining[x] < wins[i]) {
+                certificate.add(teams[i]);
             }
         }
 
@@ -130,7 +130,7 @@ public class BaseballElimination {
         FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
 
         for (int i = 1; i <= numberOfTeams; i++) {
-            if (fordFulkerson.inCut(i) && teams[i - 1] != team) {
+            if (fordFulkerson.inCut(i) && teams[i - 1].equals(team)) {
                 certificate.add(teams[i - 1]);
             }
         }
