@@ -35,7 +35,6 @@ public class BaseballElimination {
             remaining[i] = in.readInt();
             for (int j = 0; j < numberOfTeams; j++) {
                 int againstValue = in.readInt();
-                StdOut.println(i + " " + j + " " + againstValue);
                 against[i][j] = againstValue;
             }
         }
@@ -116,11 +115,12 @@ public class BaseballElimination {
 
         // Trivial elimination
         List<String> certificate = new ArrayList<>();
-        for (int i = 0; i < numberOfTeams; i++) {
-            if (wins[x] + remaining[x] < wins[i]) {
-                certificate.add(teams[i]);
+        for (int i = 1; i <= numberOfTeams; i++) {
+            if (wins[x] + remaining[x] < wins[i - 1]) {
+                certificate.add(teams[i - 1]);
             }
         }
+
         if (!certificate.isEmpty()) {
             return certificate;
         }
@@ -129,36 +129,43 @@ public class BaseballElimination {
         FlowNetwork flowNetwork = buildFlowNetwork(x);
         FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
 
-        for (int i = 0; i < numberOfTeams; i++) {
-            if (fordFulkerson.inCut(i) && i != x) {
-                certificate.add(teams[i]);
+        for (int i = 1; i <= numberOfTeams; i++) {
+            if (fordFulkerson.inCut(i) && teams[i - 1] != team) {
+                certificate.add(teams[i - 1]);
             }
         }
         return certificate.isEmpty() ? null : certificate;
     }
 
     private FlowNetwork buildFlowNetwork(int x) {
-        int teamExcludeX = numberOfTeams - 1;
-        int gameVertices = teamExcludeX * (teamExcludeX - 1) / 2;
-        int teamVertices = teamExcludeX;
-        int vertices = 2 + gameVertices + teamVertices;
+        int teamInFlow = numberOfTeams - 1;
+        int gameVertices = teamInFlow * (teamInFlow - 1) / 2;
+        int vertices = 2 + gameVertices + teamInFlow;
         FlowNetwork flowNetwork = new FlowNetwork(vertices);
         int gameVertex = 1;
-
-        for (int i = 0; i < numberOfTeams; i++) {
+        int teamVertex = 1 + gameVertices;
+        int count = 0, countJ = 1;
+        for (int i = 0; i < teamInFlow; i++) {
             if (i == x)
                 continue;
-            for (int j = 0; j < numberOfTeams; j++) {
+            for (int j = 0; j < teamInFlow; j++) {
                 if (j == x || j <= i)
                     continue;
-                flowNetwork.addEdge(new FlowEdge(0, gameVertex, against[i][j]));
-                flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertices + i, Double.POSITIVE_INFINITY));
-                flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertices + j, Double.POSITIVE_INFINITY));
 
+                flowNetwork.addEdge(new FlowEdge(0, gameVertex, against[i][j]));
+                flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertex + count, Double.POSITIVE_INFINITY));
+                flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertex + countJ, Double.POSITIVE_INFINITY));
+                // StdOut.println("s -> " + gameVertex);
+                // StdOut.println(gameVertex + "->" + (teamVertex + count));
+                // StdOut.println(gameVertex + "->" + (teamVertex + countJ));
                 gameVertex++;
+                countJ++;
             }
 
-            flowNetwork.addEdge(new FlowEdge(teamVertices + i, vertices - 1, wins[x] + remaining[x] - wins[i]));
+            // StdOut.println(gameVertex + "->" + (teamVertex + countJ));
+            flowNetwork.addEdge(new FlowEdge(teamVertex + count, vertices - 1, wins[x] + remaining[x] - wins[i]));
+            count++;
+            countJ = count + 1;
         }
 
         return flowNetwork;
