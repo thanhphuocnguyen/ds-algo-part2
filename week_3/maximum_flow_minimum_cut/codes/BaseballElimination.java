@@ -129,10 +129,10 @@ public class BaseballElimination {
         int count = 0, countJ = 1;
         int sum = 0;
         String[] networkTeams = new String[teamInFlow];
-        for (int i = 0; i < teamInFlow; i++) {
+        for (int i = 0; i < numberOfTeams; i++) {
             if (i == x)
                 continue;
-            for (int j = i + 1; j < teamInFlow; j++) {
+            for (int j = i + 1; j < numberOfTeams; j++) {
                 if (j == x)
                     continue;
                 flowNetwork.addEdge(new FlowEdge(0, gameVertex, against[i][j]));
