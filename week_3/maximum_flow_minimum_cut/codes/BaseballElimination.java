@@ -4,13 +4,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
-
-import edu.princeton.cs.algs4.Bag;
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
 import edu.princeton.cs.algs4.FlowEdge;
 import edu.princeton.cs.algs4.FlowNetwork;
 import edu.princeton.cs.algs4.FordFulkerson;
-import edu.princeton.cs.algs4.In;
-import edu.princeton.cs.algs4.StdOut;
 
 public class BaseballElimination {
     private final int numberOfTeams;
@@ -100,9 +98,11 @@ public class BaseballElimination {
         for (int i = 0; i < numberOfTeams; i++) {
             if (wins[x] + remaining[x] < wins[i]) {
                 certificate.add(teams[i]);
-                return true;
+                flag = true;
             }
         }
+        if (flag)
+            return flag;
         // Non-trivial elimination
         flag = checkFlow(x);
         return flag;
@@ -114,7 +114,6 @@ public class BaseballElimination {
         // Non-trivial elimination
         boolean flag = isEliminated(team);
         if (flag) {
-            Collections.sort(certificate);
             return certificate;
         } else
             return null;
@@ -129,39 +128,43 @@ public class BaseballElimination {
         int teamVertex = 1 + gameVertices;
         int count = 0, countJ = 1;
         int sum = 0;
+        String[] networkTeams = new String[teamInFlow];
         for (int i = 0; i < teamInFlow; i++) {
             if (i == x)
                 continue;
-            for (int j = 0; j < teamInFlow; j++) {
-                if (j == x || j <= i)
+            for (int j = i + 1; j < teamInFlow; j++) {
+                if (j == x)
                     continue;
-
                 flowNetwork.addEdge(new FlowEdge(0, gameVertex, against[i][j]));
                 flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertex + count, Double.POSITIVE_INFINITY));
                 flowNetwork.addEdge(new FlowEdge(gameVertex, teamVertex + countJ, Double.POSITIVE_INFINITY));
+                // StdOut.println("s ->" + gameVertex + " cap: " + against[i][j]);
+                // StdOut.println("against " + teams[i] + "-" + teams[j] + " " + against[i][j]);
+                // StdOut.println(gameVertex + " -> " + (teamVertex + count));
+                // StdOut.println(gameVertex + " -> " + (teamVertex + countJ));
                 sum += against[i][j];
                 gameVertex++;
                 countJ++;
             }
-
+            networkTeams[count] = teams[i];
             flowNetwork.addEdge(new FlowEdge(teamVertex + count, vertices - 1, wins[x] + remaining[x] - wins[i]));
+            // StdOut.println((teamVertex + count) + " -> t" + " cap: " + (wins[x] +
+            // remaining[x] - wins[i]));
+
             count++;
             countJ = count + 1;
         }
 
         FordFulkerson fordFulkerson = new FordFulkerson(flowNetwork, 0, flowNetwork.V() - 1);
-        if (sum == fordFulkerson.value())
+
+        if (sum == fordFulkerson.value()) {
             return false;
-        else {
+        } else {
             int checkIdx = gameVertices + 1;
             for (int v = checkIdx; v < vertices - 1; v++) {
+                StdOut.println(v);
                 if (fordFulkerson.inCut(v)) {
-                    certificate.add(teams[v - checkIdx]);
-                }
-            }
-            for (FlowEdge edge : flowNetwork.adj(0)) {
-                if (edge.capacity() > edge.flow()) {
-                    return true;
+                    certificate.add(networkTeams[v - checkIdx]);
                 }
             }
             return true;
