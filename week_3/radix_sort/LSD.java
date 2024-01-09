@@ -5,7 +5,7 @@ public class LSD {
 
     public static void sort(String[] a, int W) {
         int N = a.length;
-        int R = 256;
+        int R = 256; // number of characters in the alphabet
         String[] aux = new String[N];
         for (int d = W - 1; d >= 0; d--) {
             int[] count = new int[R + 1]; // Compute frequency counts.
