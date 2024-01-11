@@ -1,3 +1,5 @@
+package codes;
+
 /**
  * TernaryST Ternary Search Tree
  */
@@ -15,7 +17,7 @@ public class TernaryST<Value> {
     }
 
     private Node put(Node x, String key, Value val, int d) {
-        c = key.charAt(d);
+        char c = key.charAt(d);
         if (x == null) {
             x = new Node();
             x.c = c;
