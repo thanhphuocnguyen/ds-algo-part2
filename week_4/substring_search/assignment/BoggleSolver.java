@@ -9,7 +9,7 @@ public class BoggleSolver {
     // dictionary.
     // (You can assume each word in the dictionary contains only the uppercase
     // letters A through Z.)
-    private TrieDict dictionarySet;
+    private final TrieDict dictionarySet;
 
     public BoggleSolver(String[] dictionary) {
         dictionarySet = new TrieDict();
@@ -110,10 +110,10 @@ public class BoggleSolver {
         HashSet<String> validWords = new HashSet<>();
         int rows = board.rows();
         int cols = board.cols();
+        boolean[][] visited = new boolean[rows][cols];
         StringBuilder prefix = new StringBuilder();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
-                boolean[][] visited = new boolean[rows][cols];
                 dfs(board, i, j, visited, prefix, validWords, null);
             }
         }
@@ -130,7 +130,7 @@ public class BoggleSolver {
 
         visited[row][col] = true;
 
-        if (prefix.length() >= 3 && dictionarySet.getPrefix(cached, prefix.toString()) != null) {
+        if (prefix.length() >= 3 && dictionarySet.get(prefix.toString()) > 0) {
             validWords.add(prefix.toString());
         }
 
