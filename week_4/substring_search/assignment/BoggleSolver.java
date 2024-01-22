@@ -1,3 +1,5 @@
+import java.util.HashSet;
+
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdOut;
 import edu.princeton.cs.algs4.TrieSET;
@@ -7,79 +9,161 @@ public class BoggleSolver {
     // dictionary.
     // (You can assume each word in the dictionary contains only the uppercase
     // letters A through Z.)
-    private final TrieSET dictionarySet;
-    private int[] scoreSet;
+    private TrieDict dictionarySet;
 
     public BoggleSolver(String[] dictionary) {
-        dictionarySet = new TrieSET();
+        dictionarySet = new TrieDict();
         for (String word : dictionary) {
-            dictionarySet.add(word);
+            dictionarySet.put(word);
         }
-        scoreSet = new int[] { 0, 0, 0, 1, 1, 2, 3, 5, 11 };
+    }
+
+    private static class Node {
+        private Object value;
+        private int depth = 0;
+        private Node[] next;
+
+        private Node(int R) {
+            next = new Node[R];
+        }
+    }
+
+    private static class TrieDict {
+        private static final int R = 26;
+        private Node root = new Node(R);
+        private static final char FST = 'A';
+
+        private void put(String key) {
+            root = put(root, key, 0);
+        }
+
+        private Node put(Node x, String key, int d) {
+            if (x == null) {
+                x = new Node(R);
+                x.depth = d;
+            }
+            if (d == key.length()) {
+                x.value = lengthToScore(key.length());
+                return x;
+            }
+            char c = key.charAt(d);
+            x.next[c - FST] = put(x.next[c - FST], key, d + 1);
+            return x;
+        }
+
+        private int lengthToScore(int length) {
+            if (length <= 2) {
+                return 0;
+            } else if (length <= 4) {
+                return 1;
+            } else if (length <= 5) {
+                return 2;
+            } else if (length <= 6) {
+                return 3;
+            } else if (length <= 7) {
+                return 5;
+            } else {
+                return 11;
+            }
+        }
+
+        private int get(String key) {
+            return get(root, key, 0);
+        }
+
+        private int get(Node x, String key, int d) {
+            if (x == null) {
+                return -1;
+            }
+            if (d == key.length()) {
+                if (x.value == null) {
+                    return 0;
+                }
+                return (int) x.value;
+            }
+            char c = key.charAt(d);
+            return get(x.next[c - FST], key, d + 1);
+        }
+
+        private Node getPrefix(Node cached, String prefix) {
+            if (cached == null) {
+                return getPrefix(root, prefix, 0);
+            } else {
+                return getPrefix(cached, prefix, cached.depth);
+            }
+        }
+
+        private Node getPrefix(Node x, String prefix, int d) {
+            if (x == null) {
+                return null;
+            }
+            if (d == prefix.length()) {
+                return x;
+            }
+            char c = prefix.charAt(d);
+            return getPrefix(x.next[c - FST], prefix, d + 1);
+        }
     }
 
     // Returns the set of all valid words in the given Boggle board, as an Iterable.
     public Iterable<String> getAllValidWords(BoggleBoard board) {
-        TrieSET validWords = new TrieSET();
+        HashSet<String> validWords = new HashSet<>();
         int rows = board.rows();
         int cols = board.cols();
-
+        StringBuilder prefix = new StringBuilder();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 boolean[][] visited = new boolean[rows][cols];
-                StringBuilder currentWord = new StringBuilder();
-                explore(board, i, j, visited, currentWord, validWords);
+                dfs(board, i, j, visited, prefix, validWords, null);
             }
         }
-
         return validWords;
     }
 
-    private void explore(BoggleBoard board, int i, int j, boolean[][] visited, StringBuilder currentWord,
-            TrieSET validWords) {
-        if (i < 0 || i >= board.rows() || j < 0 || j >= board.cols() || visited[i][j]) {
+    private void dfs(BoggleBoard board, int row, int col, boolean[][] visited, StringBuilder prefix,
+            HashSet<String> validWords, Node cached) {
+        if (visited[row][col]) {
             return;
         }
+        char letter = board.getLetter(row, col);
+        prefix.append(letter == 'Q' ? "QU" : letter);
 
-        char letter = board.getLetter(i, j);
-        if (letter == 'Q') {
-            currentWord.append("QU");
-        } else {
-            currentWord.append(letter);
+        visited[row][col] = true;
+
+        if (prefix.length() >= 3 && dictionarySet.getPrefix(cached, prefix.toString()) != null) {
+            validWords.add(prefix.toString());
         }
 
-        visited[i][j] = true;
-
-        if (currentWord.length() >= 3 && dictionarySet.contains(currentWord.toString())) {
-            validWords.add(currentWord.toString());
-        }
-
-        if (dictionarySet.longestPrefixOf(currentWord.toString()) != null) {
-            for (int row = i - 1; row <= i + 1; row++) {
-                for (int col = j - 1; col <= j + 1; col++) {
-                    explore(board, row, col, visited, currentWord, validWords);
+        // StdOut.println(dictionarySet.keysWithPrefix(prefix.toString()));
+        cached = dictionarySet.getPrefix(cached, prefix.toString());
+        if (cached != null) {
+            int rows = board.rows();
+            int cols = board.cols();
+            for (int i = Math.max(0, row - 1); i <= Math.min(rows - 1, row + 1); i++) {
+                for (int j = Math.max(0, col - 1); j <= Math.min(cols - 1, col + 1); j++) {
+                    dfs(board, i, j, visited, prefix, validWords, cached);
                 }
             }
         }
-
-        visited[i][j] = false;
-        int length = currentWord.length();
-        if (length >= 2 && currentWord.charAt(length - 1) == 'U' && currentWord.charAt(length - 2) == 'Q') {
-            currentWord.deleteCharAt(length - 1);
-            currentWord.deleteCharAt(length - 2);
-        } else {
-            currentWord.deleteCharAt(length - 1);
+        prefix.deleteCharAt(prefix.length() - 1);
+        if (letter == 'Q') {
+            prefix.deleteCharAt(prefix.length() - 1);
         }
+
+        visited[row][col] = false;
     }
 
     // Returns the score of the given word if it is in the dictionary, zero
     // otherwise.
     // (You can assume the word contains only the uppercase letters A through Z.)
     public int scoreOf(String word) {
-        if (dictionarySet.contains(word)) {
-            return word.length() <= scoreSet.length ? scoreSet[word.length()] : 11;
-        }
-        return 0;
+        if (word == null)
+            throw new NullPointerException();
+        int score = dictionarySet.get(word);
+        if (score <= 0)
+            return 0;
+        else
+            return score;
     }
 
     public static void main(String[] args) {
